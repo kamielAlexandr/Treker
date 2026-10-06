@@ -1,0 +1,461 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<meta name="theme-color" content="#faf6ef" />
+<title>Трекер тренировок</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  :root {
+    --page:#faf6ef; --text:#3d3630; --muted:#9c9187;
+    --card:#ffffffcc; --border:#efe7da; --chip:#f1eadd; --chip-text:#7a6f63;
+    --soft:#f6f0e6; --accent:#d97b4a; --track:#efe8dc;
+    --input-bg:#fff; --input-border:#e5dccb;
+    --g1:#f4a261; --g2:#e07850; --green1:#8bb89a; --green2:#5f926f;
+    --shadow:0 2px 16px rgba(90,70,50,.06);
+  }
+  [data-theme="dark"] {
+    --page:#191512; --text:#efe9e1; --muted:#a89e93;
+    --card:#241f1b; --border:#373029; --chip:#332c26; --chip-text:#d8cfc4;
+    --soft:#2d2723; --accent:#f0a868; --track:#332c26;
+    --input-bg:#191512; --input-border:#453d34;
+    --shadow:none;
+  }
+  body { background:var(--page); color:var(--text); font-family:system-ui,-apple-system,sans-serif;
+         min-height:100vh; padding-top:env(safe-area-inset-top); padding-bottom:env(safe-area-inset-bottom); }
+  .wrap { max-width:420px; margin:0 auto; padding:0 16px 40px; }
+  .card { background:var(--card); border:1px solid var(--border); border-radius:24px;
+          box-shadow:var(--shadow); padding:20px; backdrop-filter:blur(8px); }
+  .btn-primary { width:100%; padding:14px; border:none; border-radius:16px; cursor:pointer;
+    background:linear-gradient(90deg,var(--g1),var(--g2)); color:#fff; font-weight:700; font-size:16px;
+    box-shadow:0 2px 8px rgba(224,120,80,.3); transition:transform .1s, filter .15s; font-family:inherit; }
+  .btn-primary:hover { filter:brightness(1.05); } .btn-primary:active { transform:scale(.98); }
+  .btn-primary:disabled { opacity:.4; pointer-events:none; }
+  .chip-btn { background:var(--chip); color:var(--chip-text); border:none; border-radius:999px;
+    padding:8px 14px; font-weight:700; font-size:13px; cursor:pointer; font-family:inherit;
+    display:inline-flex; align-items:center; gap:6px; transition:background .15s; white-space:nowrap; }
+  .chip-btn:hover { filter:brightness(.97); }
+  .chip-btn.active { background:linear-gradient(90deg,var(--g1),var(--g2)); color:#fff; box-shadow:0 2px 8px rgba(224,120,80,.3); }
+  .icon-btn { width:36px; height:36px; border-radius:999px; padding:0; justify-content:center; }
+  .grad-text-btn { background:none; border:none; color:var(--accent); font-weight:600; font-size:12px;
+    cursor:pointer; text-decoration:underline; text-underline-offset:2px; font-family:inherit; }
+  .small-btn { border:none; border-radius:12px; padding:6px 0; flex:1; font-weight:600; font-size:12px;
+    cursor:pointer; background:var(--chip); color:var(--chip-text); font-family:inherit; }
+  .small-btn:hover, .small-btn:active { filter:brightness(.97); }
+  input[type=number], input[type=time] { background:var(--input-bg); border:2px solid var(--input-border);
+    color:var(--text); border-radius:16px; padding:8px 12px; font-size:24px; font-weight:900; width:100%;
+    text-align:center; font-family:inherit; -moz-appearance:textfield; }
+  input:focus { outline:none; border-color:var(--g1); }
+  input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance:none; margin:0; }
+  .row { display:flex; align-items:center; gap:12px; }
+  .h1 { font-size:26px; font-weight:900; line-height:1.1; letter-spacing:-.02em; }
+  .sub { font-size:12px; font-weight:500; color:var(--muted); }
+  .big { font-size:42px; font-weight:900; line-height:1; font-variant-numeric:tabular-nums; word-break:break-word; }
+  .big span { font-size:18px; font-weight:700; color:var(--muted); }
+  .bar { height:12px; background:var(--track); border-radius:999px; overflow:hidden; margin-top:14px; }
+  .bar > div { height:100%; border-radius:999px; background:linear-gradient(90deg,var(--g1),var(--g2));
+               transition:width .7s ease; }
+  .bar.done > div { background:linear-gradient(90deg,var(--green1),var(--green2)); }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:14px; }
+  .stat { background:var(--soft); border-radius:16px; padding:12px; min-width:0; }
+  .stat .lbl { font-size:11px; font-weight:600; color:var(--muted); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .stat .val { font-size:20px; font-weight:900; font-variant-numeric:tabular-nums; }
+  .ex-chips { display:flex; gap:8px; overflow-x:auto; padding:4px 4px 8px; scrollbar-width:none; margin:0 -4px; }
+  .ex-chips::-webkit-scrollbar { display:none; }
+  .tabs { display:flex; gap:6px; background:var(--soft); border-radius:16px; padding:6px; margin-bottom:16px; }
+  .tabs button { flex:1; border:none; background:none; color:var(--muted); font-weight:600; font-size:14px;
+    padding:8px 0; border-radius:14px; cursor:pointer; font-family:inherit; transition:all .15s; }
+  .tabs button.active { background:linear-gradient(90deg,var(--g1),var(--g2)); color:#fff; box-shadow:0 2px 8px rgba(224,120,80,.3); }
+  .item { display:flex; align-items:center; gap:12px; background:var(--card); border:1px solid var(--border);
+          border-radius:16px; padding:12px 14px; cursor:pointer; transition:filter .15s; }
+  .item:hover { filter:brightness(1.02); }
+  .item .ic { width:44px; height:44px; flex-shrink:0; border-radius:16px; display:flex; align-items:center;
+              justify-content:center; background:var(--soft); color:var(--accent); }
+  .item .ic.done { background:linear-gradient(135deg,var(--green1),var(--green2)); color:#fff; }
+  .item .ic.picked { background:linear-gradient(135deg,var(--g1),var(--g2)); color:#fff; }
+  .item .mid { flex:1; min-width:0; }
+  .item .t { display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+  .item .t b { font-size:14px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .item .t i { font-style:normal; font-size:12px; color:var(--muted); white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .item .pct { font-size:12px; font-weight:900; color:var(--accent); width:48px; text-align:right; flex-shrink:0; }
+  .item .pct.g { color:var(--green2); }
+  .pick-card { border:1px solid var(--border); border-radius:16px; padding:14px; background:var(--card); transition:border-color .15s; }
+  .pick-card.on { border-color:var(--g1); }
+  .presets { display:flex; gap:8px; margin-top:10px; }
+  .modal-bg { position:fixed; inset:0; background:rgba(0,0,0,.4); backdrop-filter:blur(4px);
+              display:flex; align-items:center; justify-content:center; padding:24px; z-index:50; }
+  .modal { background:var(--card); border:1px solid var(--border); border-radius:24px; padding:20px;
+           width:100%; max-width:320px; box-shadow:0 20px 60px rgba(0,0,0,.25); }
+  .modal h3 { font-size:16px; font-weight:700; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+  .modal .hint { font-size:12px; color:var(--muted); margin-bottom:12px; }
+  .head { display:flex; justify-content:space-between; align-items:center; gap:8px; padding:14px 0 16px; }
+  .head .btns { display:flex; gap:8px; flex-shrink:0; }
+  .sec { margin-bottom:16px; }
+  .empty { text-align:center; color:var(--muted); font-size:14px; padding:32px 0; }
+  .legend { text-align:center; font-size:12px; color:var(--muted); margin-top:8px; }
+  .chart { display:flex; align-items:flex-end; gap:5px; height:128px; margin-top:4px; }
+  .chart .col { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; height:100%; min-width:0; }
+  .chart .num { font-size:9px; font-weight:700; color:var(--muted); margin-bottom:4px; }
+  .chart .barc { width:100%; border-radius:8px 8px 0 0; background:var(--track); min-height:4px; }
+  .chart .barc.has { background:linear-gradient(to top,var(--g2),var(--g1)); }
+  .chart .d { font-size:8px; color:var(--muted); margin-top:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:100%; }
+  svg { display:block; }
+  .plus-only { width:36px; height:36px; align-self:center; padding:0; justify-content:center; border-radius:999px; }
+</style>
+</head>
+<body>
+<div id="app" class="wrap"></div>
+
+<script>
+(function () {
+  "use strict";
+  var KEY = "pushup-tracker-v3";
+
+  var EXERCISES = [
+    { id:"pushups", name:"Отжимания",    icon:"chest", unit:"шт",  step:5,  defaults:[10,20,30,50],  defaultGoal:1000, goalPresets:[100,500,1000,5000] },
+    { id:"squats",  name:"Приседания",    icon:"leg",   unit:"шт",  step:5,  defaults:[10,20,30,50],  defaultGoal:1000, goalPresets:[100,500,1000,5000] },
+    { id:"plank",   name:"Планка",        icon:"timer", unit:"сек", step:15, defaults:[30,60,90,120], defaultGoal:3600, goalPresets:[900,1800,3600,7200], presetLabels:["15 мин","30 мин","1 ч","2 ч"] },
+    { id:"pullups", name:"Подтягивания",  icon:"bar",   unit:"шт",  step:1,  defaults:[3,5,8,10],     defaultGoal:100,  goalPresets:[50,100,200,500] },
+    { id:"abs",     name:"Пресс",         icon:"core",   unit:"шт",  step:10, defaults:[20,30,50,100], defaultGoal:1000, goalPresets:[100,500,1000,5000] }
+  ];
+
+  var ICONS = {
+    chest:'M4 8.5c2-2.5 5.5-4 9-4s6 1.5 8 4c-2 2.5-4.5 4-8 4s-7-1.5-9-4z M8 9.5c-1.5 2-2 4.5-2 6.5 M16 9.5c1.5 2 2 4.5 2 6.5 M12 12.5v4',
+    leg:'M12 5v7 M8 16c1-2 2.5-3 4-3s3 1 4 3 M12 12c-1.5 0-2.5 1.5-3 4 M12 12c1.5 0 2.5 1.5 3 4',
+    timer:'M12 6a6 6 0 100 12 6 6 0 000-12z M12 10v2.5l1.5 1.5 M9 3h6',
+    bar:'M4 5h16 M6 5v3 M18 5v3 M9 8v6 M15 8v6 M9 14h6 M9 14c-1 1.5-1 3-1 4.5 M15 14c1 1.5 1 3 1 4.5',
+    core:'M5 8c2.5 3 4.5 3 7 3s4.5 0 7-3 M5 12c2.5 3 4.5 3 7 3s4.5 0 7-3 M12 8v7'
+  };
+
+  function esc(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;"); }
+  function fmt(n){ return n.toLocaleString ? n.toLocaleString("ru") : String(n); }
+  function iconSvg(name,size){ size=size||18;
+    var paths = ICONS[name]||ICONS.chest;
+    var inner = paths.split(" M").map(function(d,i){ return '<path d="'+esc(i===0?d:"M"+d)+'"/>'; }).join("");
+    return '<svg width="'+size+'" height="'+size+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'+inner+'</svg>';
+  }
+  var checkSvg = function(s){ s=s||16; return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12.5l5 5L20 6.5"/></svg>'; };
+  var bellSvg = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9a6 6 0 1112 0c0 5 2 6 2 6H4s2-1 2-6z M10 19a2 2 0 004 0"/></svg>';
+  var plusSvg = function(s){ s=s||16; return '<svg width="'+s+'" height="'+s+'" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>'; };
+  var minusSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"/></svg>';
+  var crossSvg = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  var sunSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M19.1 4.9l-1.4 1.4M6.3 17.7l-1.4 1.4"/></svg>';
+  var moonSvg = '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13A8.5 8.5 0 1111 4a6.5 6.5 0 009 9z"/></svg>';
+  var arrowSvg = '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 5l7 7-7 7"/></svg>';
+
+  // ===== Состояние =====
+  function loadState(){
+    try {
+      var raw = localStorage.getItem(KEY);
+      if (raw) { var s = JSON.parse(raw); if (s.selected && s.goals) return s; }
+    } catch(e){}
+    return { goals:{}, selected:[], entries:[], dark:false, reminder:null, reminderFired:null, onboarded:false };
+  }
+  var S = loadState();
+  function save(){ try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} }
+
+  // ===== UI-состояние =====
+  var ui = { tab:"overview", activeEx:null, count:10, modal:null, goalFor:null, goalInput:"",
+             pick:[], remInput:"19:00", doneText:"" };
+
+  var app = document.getElementById("app");
+  document.documentElement.setAttribute("data-theme", S.dark ? "dark" : "light");
+
+  function activeExercises(){ return EXERCISES.filter(function(e){ return S.selected.indexOf(e.id)>=0; }); }
+  function exById(id){ for (var i=0;i<EXERCISES.length;i++) if (EXERCISES[i].id===id) return EXERCISES[i]; return null; }
+  function today(){ return new Date().toISOString().slice(0,10); }
+  function exTotal(id){ return S.entries.reduce(function(s,e){ return e.id===id ? s+e.count : s; },0); }
+
+  // ===== Рендер =====
+  function render(){
+    if (!S.onboarded) { renderOnboarding(); return; }
+    var list = activeExercises();
+    if (list.length===0) { renderEmpty(); return; }
+    if (!ui.activeEx || S.selected.indexOf(ui.activeEx)<0) ui.activeEx = list[0].id;
+    renderMain();
+  }
+
+  function renderOnboarding(){
+    var picked = ui.pick.length>0;
+    var h = '<div style="padding:40px 0 24px;text-align:center">'
+      + '<div style="width:64px;height:64px;margin:0 auto 20px;border-radius:24px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff;box-shadow:0 8px 24px rgba(224,120,80,.35)">'+checkSvg(26)+'</div>'
+      + '<div class="h1">Трекер</div><div class="sub" style="margin-top:4px">твои цели · твой темп</div></div>'
+      + '<div class="card sec"><div style="font-size:14px;font-weight:700;margin-bottom:4px">С чего начнём?</div>'
+      + '<div style="font-size:12px;color:var(--muted);margin-bottom:16px">Выбери одно или несколько упражнений и поставь себе цель. Никакого давления — только то, что тебе действительно нужно.</div><div style="display:flex;flex-direction:column;gap:10px">';
+
+    EXERCISES.forEach(function(e){
+      var p = null;
+      for (var i=0;i<ui.pick.length;i++) if (ui.pick[i].id===e.id) p = ui.pick[i];
+      h += '<div class="pick-card'+(p?" on":"")+'">'
+        + '<div class="row" style="cursor:pointer" onclick="window.__togglePick(\''+e.id+'\')">'
+        + '<div style="width:44px;height:44px;border-radius:16px;display:flex;align-items:center;justify-content:center;flex-shrink:0;'+(p?"background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff":"background:var(--soft);color:var(--accent)")+'">'+(p?checkSvg(18):iconSvg(e.icon,19))+'</div>'
+        + '<div style="flex:1;min-width:0"><div style="font-size:14px;font-weight:700">'+esc(e.name)+'</div>'
+        + (p ? '<div style="font-size:12px;color:var(--muted)">цель: '+fmt(p.goal)+' '+e.unit+'</div>' : '')
+        + '</div></div>';
+      if (p) {
+        h += '<div class="presets">';
+        var labels = e.presetLabels || e.goalPresets.map(String);
+        e.goalPresets.forEach(function(n,i){
+          var onStyle = p.goal===n ? "background:linear-gradient(90deg,var(--g1),var(--g2));color:#fff;box-shadow:0 2px 8px rgba(224,120,80,.3)" : "";
+          h += '<button class="small-btn" style="'+onStyle+'" onclick="window.__setPickGoal(\''+e.id+'\','+n+')">'+esc(labels[i])+'</button>';
+        });
+        h += '<button class="small-btn" style="flex:0 0 auto;padding:6px 12px" onclick="window.__openPickGoal(\''+e.id+'\')">своя</button></div>';
+      }
+      h += '</div>';
+    });
+    h += '</div></div>';
+    h += picked
+      ? '<button class="btn-primary" onclick="window.__finishOnboarding()">Начать · '+ui.pick.length+' '+(ui.pick.length===1?"цель":"целей")+' '+arrowSvg+'</button>'
+      : '<div class="legend" style="padding-bottom:8px">выбери хотя бы одно упражнение</div>';
+
+    h += modalsHtml();
+    app.innerHTML = h;
+  }
+
+  function renderEmpty(){
+    app.innerHTML = '<div style="min-height:80vh;display:flex;align-items:center;justify-content:center">'
+      + '<button class="chip-btn" style="padding:12px 24px;font-size:14px" onclick="window.__restart()">Выбрать упражнения</button></div>';
+  }
+
+  function renderMain(){
+    var e = exById(ui.activeEx);
+    var total = exTotal(e.id);
+    var goal = S.goals[e.id] || e.defaultGoal;
+    var percent = Math.min(100, Math.round((total/goal)*1000)/10);
+    var remaining = Math.max(0, goal-total);
+    var completed = total>=goal;
+    var td = today();
+    var todayEx = S.entries.reduce(function(s,x){ return (x.id===e.id && x.date===td)? s+x.count : s; },0);
+    var todayAll = S.entries.reduce(function(s,x){ return x.date===td ? s+x.count : s; },0);
+
+    var h = '';
+    h += '<div class="head"><div style="min-width:0"><div class="h1">Трекер</div><div class="sub">твои цели · твой темп</div></div>'
+      + '<div class="btns"><button class="chip-btn'+(S.reminder?" active":"")+'" onclick="window.__openModal(\'reminder\')">'+bellSvg+' '+(S.reminder||"напомнить")+'</button>'
+      + '<button class="chip-btn icon-btn" onclick="window.__toggleDark()">'+(S.dark?sunSvg:moonSvg)+'</button></div></div>';
+
+    h += '<div class="ex-chips">';
+    activeExercises().forEach(function(x){
+      var act = ui.activeEx===x.id;
+      h += '<button class="chip-btn'+(act?" active":"")+'" style="'+(act?"transform:scale(1.03)":"")+'" onclick="window.__setActive(\''+x.id+'\')">'+iconSvg(x.icon,15)+' '+esc(x.name)+'</button>';
+    });
+    h += '<button class="chip-btn plus-only" title="Добавить или убрать упражнение" onclick="window.__openModal(\'manage\')">'+plusSvg(14)+'</button></div>';
+
+    h += '<div class="card sec" style="position:relative;text-align:center;overflow:hidden">'
+      + '<div style="position:absolute;top:-64px;right:-64px;width:160px;height:160px;border-radius:50%;filter:blur(40px);opacity:.2;background:linear-gradient(135deg,var(--g1),var(--g2));pointer-events:none"></div>'
+      + '<div style="position:relative"><div class="big">'+fmt(total)+'<span> / '+fmt(goal)+'</span></div>'
+      + '<div style="font-size:14px;color:var(--muted);margin-top:6px">'
+      + (completed ? "Цель достигнута." : "Осталось "+fmt(remaining)+" "+e.unit+" · "+percent+"%")+'</div>'
+      + '<div class="bar'+(completed?" done":"")+'"><div style="width:'+percent+'%"></div></div>'
+      + '<div class="grid2"><div class="stat"><div class="lbl" style="color:var(--accent)">Сегодня · '+esc(e.name)+'</div><div class="val">'+fmt(todayEx)+' '+e.unit+'</div></div>'
+      + '<div class="stat"><div class="lbl">Всего за сегодня</div><div class="val">'+fmt(todayAll)+'</div></div></div>'
+      + '<button class="grad-text-btn" style="margin-top:12px" onclick="window.__openGoalDialog()">изменить цель</button></div></div>';
+
+    h += '<div class="card sec"><div style="font-size:14px;font-weight:700;margin-bottom:12px">Отметить: '+esc(e.name)+'</div>'
+      + '<div class="row"><button class="chip-btn icon-btn" style="width:44px;height:44px;border-radius:16px" onclick="window.__bump(-'+e.step+')">'+minusSvg+'</button>'
+      + '<input type="number" inputmode="numeric" id="countInput" value="'+esc(ui.count)+'" oninput="window.__setCount(this.value)" />'
+      + '<button class="chip-btn icon-btn" style="width:44px;height:44px;border-radius:16px" onclick="window.__bump('+e.step+')">'+plusSvg()+'</button></div>'
+      + '<div class="presets" style="margin-top:8px">';
+    e.defaults.forEach(function(n){ h += '<button class="small-btn" onclick="window.__setCount('+n+')">'+n+'</button>'; });
+    h += '</div><button class="btn-primary" style="margin-top:12px" onclick="window.__addEntry()">Записать '+(ui.count||0)+' '+e.unit+'</button></div>';
+
+    h += '<div class="tabs"><button'+(ui.tab==="overview"?' class="active"':'')+' onclick="window.__setTab(\'overview\')">Обзор</button>'
+      + '<button'+(ui.tab==="history"?' class="active"':'')+' onclick="window.__setTab(\'history\')">История</button>'
+      + '<button'+(ui.tab==="stats"?' class="active"':'')+' onclick="window.__setTab(\'stats\')">Статистика</button></div>';
+
+    if (ui.tab==="overview") {
+      h += '<div style="display:flex;flex-direction:column;gap:10px">';
+      activeExercises().forEach(function(x){
+        var g = S.goals[x.id] || x.defaultGoal;
+        var t = exTotal(x.id);
+        var p = Math.min(100, Math.round((t/g)*1000)/10);
+        var fin = t>=g;
+        h += '<div class="item" onclick="window.__openFromOverview(\''+x.id+'\')">'
+          + '<div class="ic'+(fin?" done":"")+'">'+(fin?checkSvg():iconSvg(x.icon,19))+'</div>'
+          + '<div class="mid"><div class="t"><b>'+esc(x.name)+'</b><i>'+fmt(t)+' / '+fmt(g)+' '+x.unit+'</i></div>'
+          + '<div class="bar'+(fin?" done":"")+'" style="height:8px;margin-top:8px"><div style="width:'+p+'%"></div></div></div>'
+          + '<div class="pct'+(fin?" g":"")+'">'+(fin?"готово":p+"%")+'</div></div>';
+      });
+      h += '<div class="legend">нажми на упражнение, чтобы записать подход</div></div>';
+    }
+
+    if (ui.tab==="history") {
+      h += '<div style="display:flex;flex-direction:column;gap:8px">';
+      if (S.entries.length===0) h += '<div class="card empty">Пока пусто. Жми «Записать» после первого подхода.</div>';
+      S.entries.forEach(function(en){
+        var x = exById(en.id); if (!x) return;
+        h += '<div class="item" style="cursor:default"><div class="ic">'+iconSvg(x.icon,17)+'</div>'
+          + '<div class="mid"><div style="font-weight:900;font-variant-numeric:tabular-nums">'+en.count+' '+x.unit+'</div>'
+          + '<div style="font-size:12px;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+esc(x.name)+' · '
+          + new Date(en.ts).toLocaleString("ru",{day:"numeric",month:"long",hour:"2-digit",minute:"2-digit"})+'</div></div>'
+          + '<button class="chip-btn icon-btn" style="background:none;color:var(--muted);width:32px;height:32px" onclick="window.__removeEntry('+en.ts+')">'+crossSvg+'</button></div>';
+      });
+      h += '</div>';
+    }
+
+    if (ui.tab==="stats") {
+      var days = [];
+      for (var i=13;i>=0;i--) {
+        var d = new Date(); d.setDate(d.getDate()-i);
+        var key = d.toISOString().slice(0,10);
+        var c = S.entries.reduce(function(s,x){ return (x.date===key&&x.id===e.id)? s+x.count : s; },0);
+        days.push({ label: key.slice(8)+"."+key.slice(5,7), count:c });
+      }
+      var max = Math.max.apply(null, days.map(function(d){return d.count;}).concat([1]));
+      h += '<div class="card"><div style="font-size:14px;font-weight:700;margin-bottom:16px">'+esc(e.name)+' · последние 14 дней</div><div class="chart">';
+      days.forEach(function(d){
+        h += '<div class="col"><div class="num">'+(d.count||"")+'</div>'
+          + '<div class="barc'+(d.count?" has":"")+'" style="height:'+Math.max(4,(d.count/max)*100)+'%"></div>'
+          + '<div class="d">'+d.label+'</div></div>';
+      });
+      h += '</div>';
+      var exEntries = S.entries.filter(function(x){ return x.id===e.id; });
+      if (exEntries.length>0) {
+        var best = Math.max.apply(null, exEntries.map(function(x){return x.count;}));
+        var daySet = {}; exEntries.forEach(function(x){ daySet[x.date]=1; });
+        h += '<div style="margin-top:20px;padding-top:16px;border-top:1px solid var(--border);font-size:14px;color:var(--muted)">'
+          + '<div>Средний подход: <b style="color:var(--text)">'+Math.round(total/exEntries.length)+' '+e.unit+'</b></div>'
+          + '<div>Лучший подход: <b style="color:var(--text)">'+best+' '+e.unit+'</b></div>'
+          + '<div>Дней с тренировками: <b style="color:var(--text)">'+Object.keys(daySet).length+'</b></div>'
+          + '<div>Всего подходов записано: <b style="color:var(--text)">'+S.entries.length+'</b></div></div>';
+      }
+      h += '</div>';
+    }
+
+    h += modalsHtml({ ex:e });
+    app.innerHTML = h;
+  }
+
+  function modalsHtml(ctx){
+    var h = "";
+    if (ui.modal==="goal" && ctx) {
+      var e = ctx.ex;
+      h += '<div class="modal-bg" onclick="window.__closeModal()"><div class="modal" onclick="event.stopPropagation()">'
+        + '<h3>Цель · '+esc(e.name)+'</h3>'
+        + '<input type="number" inputmode="numeric" id="goalInput" value="'+esc(ui.goalInput)+'" oninput="window.__goalInput=this.value" />'
+        + '<div class="presets" style="margin-top:12px">';
+      var pres = e.goalPresets, labels = e.presetLabels || pres.map(String);
+      pres.forEach(function(n,i){
+        h += '<button class="small-btn" onclick="window.__setGoalInput('+n+')">'+esc(labels[i])+'</button>';
+      });
+      h += '</div><button class="btn-primary" style="margin-top:12px" onclick="window.__saveGoal()">Сохранить</button></div></div>';
+    }
+    if (ui.modal==="pick-goal" && ui.goalFor) {
+      var pe = exById(ui.goalFor);
+      h += '<div class="modal-bg" onclick="window.__closeModal()"><div class="modal" onclick="event.stopPropagation()">'
+        + '<h3>Цель · '+esc(pe.name)+'</h3>'
+        + '<input type="number" inputmode="numeric" id="goalInput" value="'+esc(ui.goalInput)+'" oninput="window.__goalInput=this.value" />'
+        + '<button class="btn-primary" style="margin-top:12px" onclick="window.__savePickGoal()">Сохранить</button></div></div>';
+    }
+    if (ui.modal==="reminder") {
+      h += '<div class="modal-bg" onclick="window.__closeModal()"><div class="modal" onclick="event.stopPropagation()">'
+        + '<h3>'+bellSvg+' Напоминание о тренировке</h3>'
+        + '<div class="hint">Пока страница открыта, в указанное время покажет напоминание.</div>'
+        + '<input type="time" value="'+esc(ui.remInput)+'" oninput="window.__remInput=this.value" style="font-size:20px" />'
+        + '<div class="presets" style="margin-top:12px"><button class="small-btn" style="flex:1;padding:10px 0;font-size:14px" onclick="window.__clearReminder()">Убрать</button>'
+        + '<button class="small-btn" style="flex:1;padding:10px 0;font-size:14px;background:linear-gradient(90deg,var(--g1),var(--g2));color:#fff" onclick="window.__saveReminder()">Включить</button></div></div></div>';
+    }
+    if (ui.modal==="manage") {
+      h += '<div class="modal-bg" onclick="window.__closeModal()"><div class="modal" style="max-height:80vh;overflow:auto" onclick="event.stopPropagation()">'
+        + '<h3>Упражнения</h3><div class="hint">Отметь то, за чем хочешь следить. Записи удалённых упражнений сохраняются и вернутся, если снова включить.</div><div style="display:flex;flex-direction:column;gap:8px">';
+      EXERCISES.forEach(function(e){
+        var on = S.selected.indexOf(e.id)>=0;
+        h += '<button class="item" style="width:100%;text-align:left;font-family:inherit'+(on?";border-color:var(--g1)":"")+'" onclick="window.__toggleManaged(\''+e.id+'\')">'
+          + '<div class="ic'+(on?" picked":"")+'">'+(on?checkSvg(17):iconSvg(e.icon,18))+'</div>'
+          + '<div class="mid"><div style="font-size:14px;font-weight:700">'+esc(e.name)+'</div>'
+          + '<div style="font-size:12px;color:var(--muted)">'+(on?"цель: "+fmt(S.goals[e.id]||e.defaultGoal)+" "+e.unit:"не выбрано")+'</div></div></button>';
+      });
+      h += '</div><button class="btn-primary" style="margin-top:16px" onclick="window.__closeModal()">Готово</button></div></div>';
+    }
+    if (ui.modal==="done") {
+      h += '<div class="modal-bg" onclick="window.__closeModal()"><div class="modal" style="text-align:center;padding:32px 20px" onclick="event.stopPropagation()">'
+        + '<div style="width:56px;height:56px;margin:0 auto 16px;border-radius:16px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,var(--g1),var(--g2));color:#fff">'+checkSvg(24)+'</div>'
+        + '<div style="font-size:18px;font-weight:900;margin-bottom:16px">'+esc(ui.doneText)+'</div>'
+        + '<button class="btn-primary" onclick="window.__closeModal()">Погнали</button></div></div>';
+    }
+    return h;
+  }
+
+  // ===== Действия =====
+  window.__togglePick = function(id){
+    var idx = -1; for (var i=0;i<ui.pick.length;i++) if (ui.pick[i].id===id) idx=i;
+    if (idx>=0) ui.pick.splice(idx,1); else { var e=exById(id); ui.pick.push({id:id, goal:e.defaultGoal}); }
+    render();
+  };
+  window.__setPickGoal = function(id,n){ ui.pick.forEach(function(p){ if(p.id===id) p.goal=n; }); render(); };
+  window.__openPickGoal = function(id){ var p=null; ui.pick.forEach(function(x){ if(x.id===id) p=x; });
+    ui.goalFor=id; ui.goalInput=String(p.goal); ui.modal="pick-goal"; render();
+    var el=document.getElementById("goalInput"); if(el) el.focus(); };
+  window.__goalInput = "";
+  window.__setGoalInput = function(n){ ui.goalInput=String(n); render();
+    var el=document.getElementById("goalInput"); if(el) el.focus(); };
+  window.__savePickGoal = function(){
+    var n = parseInt(ui.goalInput,10);
+    if (n>0) ui.pick.forEach(function(p){ if(p.id===ui.goalFor) p.goal=n; });
+    ui.modal=null; ui.goalFor=null; render();
+  };
+  window.__finishOnboarding = function(){
+    S.onboarded = true;
+    S.selected = ui.pick.map(function(p){ return p.id; });
+    ui.pick.forEach(function(p){ S.goals[p.id]=p.goal; });
+    save(); render();
+  };
+  window.__restart = function(){
+    S.onboarded=false;
+    ui.pick = S.selected.map(function(id){ return {id:id, goal:S.goals[id]||exById(id).defaultGoal}; });
+    save(); render();
+  };
+  window.__toggleDark = function(){ S.dark=!S.dark; document.documentElement.setAttribute("data-theme",S.dark?"dark":"light"); save(); render(); };
+  window.__setActive = function(id){ ui.activeEx=id; var e=exById(id); ui.count=e.defaults[0]; render(); };
+  window.__setTab = function(t){ ui.tab=t; render(); };
+  window.__bump = function(d){ var c=(parseInt(ui.count,10)||0)+d; ui.count=Math.max(1,c); render();
+    var el=document.getElementById("countInput"); if(el) el.focus(); };
+  window.__openFromOverview = function(id){ ui.activeEx=id; var e=exById(id); ui.count=e.defaults[0]; ui.tab="history"; render(); };
+  window.__addEntry = function(){
+    var n = parseInt(ui.count,10); if (!n||n<=0) return;
+    var e = exById(ui.activeEx);
+    var before = exTotal(e.id);
+    S.entries.unshift({ id:e.id, count:n, date:today(), ts:Date.now() });
+    var goal = S.goals[e.id]||e.defaultGoal;
+    if (before+n>=goal && before<goal) { ui.modal="done"; ui.doneText='Цель «'+e.name+'» достигнута. Красавчик.'; }
+    save(); render();
+  };
+  window.__removeEntry = function(ts){ S.entries = S.entries.filter(function(x){return x.ts!==ts;}); save(); render(); };
+  window.__openGoalDialog = function(){
+    ui.goalInput=String(S.goals[ui.activeEx]||exById(ui.activeEx).defaultGoal);
+    ui.modal="goal"; render();
+    var el=document.getElementById("goalInput"); if(el) el.focus();
+  };
+  window.__saveGoal = function(){ var n=parseInt(ui.goalInput,10); if(n>0) S.goals[ui.activeEx]=n; ui.modal=null; save(); render(); };
+  window.__toggleManaged = function(id){
+    var i = S.selected.indexOf(id);
+    if (i>=0) S.selected.splice(i,1); else { S.selected.push(id); if(!S.goals[id]) S.goals[id]=exById(id).defaultGoal; }
+    save(); render();
+  };
+  window.__openModal = function(m){ ui.modal=m; render();
+    if (m==="goal"){ var el=document.getElementById("goalInput"); if(el) el.focus(); } };
+  window.__closeModal = function(){ ui.modal=null; ui.doneText=""; render(); };
+  window.__remInput = ui.remInput;
+  window.__saveReminder = function(){ S.reminder = /^\d{2}:\d{2}$/.test(ui.remInput)? ui.remInput : null; ui.modal=null; save(); render(); };
+  window.__clearReminder = function(){ S.reminder=null; ui.modal=null; save(); render(); };
+  window.__setCount = function(v){ ui.count=v; render();
+    var el=document.getElementById("countInput"); if(el){ el.focus(); } };
+
+  // ===== Напоминание =====
+  setInterval(function(){
+    if (!S.reminder || ui.modal==="done") return;
+    var now = new Date();
+    var cur = ("0"+now.getHours()).slice(-2)+":"+("0"+now.getMinutes()).slice(-2);
+    var td = now.toISOString().slice(0,10);
+    if (cur===S.reminder && S.reminderFired!==td) {
+      S.reminderFired=td; save();
+      ui.modal="done"; ui.doneText="Пора тренироваться. Отметь подход.";
+      render();
+    }
+  }, 30000);
+
+  render();
+})();
+</script>
+</body>
+</html>
